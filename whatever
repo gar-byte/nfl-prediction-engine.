@@ -1,0 +1,46 @@
+# NFL Prediction Engine
+
+An **actual runnable research prototype** for NFL game-score forecasts, Monte Carlo win/cover/total probabilities, historical walk-forward evaluation, and simple betting expected-value calculations. It is **not a validated profitable betting system**.
+
+## Quick start (computer with Python 3.10+)
+
+```bash
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows: .venv\\Scripts\\activate
+pip install -e '.[dev]'
+streamlit run app.py
+```
+
+Upload a schedules CSV in the dashboard. An example source is the **nflverse schedules** dataset at https://github.com/nflverse/nfldata/blob/master/data/games.csv (check current availability and licensing). Download it as a CSV, rather than saving a GitHub HTML page.
+
+Minimum columns: `season,week,gameday,home_team,away_team,home_score,away_score`. Upcoming games must have blank scores. Historical games with scores are used to train. For accurate forecasts, include historical games prior to the target game.
+
+## CLI
+
+```bash
+nfl-engine --csv data/games.csv --mode backtest --min-train 128
+nfl-engine --csv data/games.csv --mode forecast --home BUF --away MIA --spread -3.5 --total 44.5 --sims 20000
+pytest -q
+```
+
+Forecast mode selects the earliest **unplayed** row matching the home and away teams. The supplied `--spread` is from the **home** team's perspective (e.g. -3.5 means home favored by 3.5).
+
+## What it actually does
+
+- Builds pre-game team averages with five-game shrinkage; never uses scores from the target date or future dates.
+- Fits separate regularized linear regressions for home and away scores.
+- Samples paired training residuals to preserve some score correlation, then computes simulation-based probabilities.
+- Runs chronological walk-forward score-margin MAE evaluation, using only data before each prediction block.
+- Calculates expected profit per $1 wagered using user-entered American odds and estimated push probability.
+- Includes unit tests and GitHub Actions CI.
+
+## Limitations and roadmap
+
+**Important:** Training residuals are in-sample, so simulated probabilities are not calibrated. The model ignores QB availability, injuries, weather, travel, live betting markets, and other contextual information. There is no guarantee of predictive accuracy or positive betting returns. No bookmaker account access, automated wagers, or paid data API is included.
+
+Next: ingest current nflverse schedules automatically; add QB/injury/rest/weather data with timestamped snapshots; rolling-season features; time-split probability calibration; benchmark vs closing lines; record line history, pushes, vig, CLV, ROI, and transaction costs. Only use features that were actually available at prediction time.
+
+## Privacy
+
+The app processes uploaded CSVs locally. It does not send your data to ChatGPT or betting providers. Installing packages and downloading data still involve normal network access; running Streamlit on a network-accessible interface may expose the dashboard, so keep it bound to localhost and do not publish private data.
